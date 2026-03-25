@@ -7,20 +7,31 @@ struct MotionTask: Decodable, Sendable, Identifiable {
     let name: String
     /// Duration in minutes. Nil when the API returns "NONE", "REMINDER", or the field is absent.
     let duration: Int?
-    /// ISO 8601 datetime string, e.g. "2026-03-25T08:15:00.000Z"
+    /// ISO 8601 datetime string (top-level, may be nil if Motion uses chunks instead)
     let scheduledStart: String?
-    /// ISO 8601 datetime string, e.g. "2026-03-25T09:10:00.000Z"
+    /// ISO 8601 datetime string (top-level, may be nil if Motion uses chunks instead)
     let scheduledEnd: String?
     let completed: Bool
     let status: MotionTaskStatus?
+    /// Scheduling chunks: Motion splits tasks into calendar blocks here
+    let chunks: [MotionTaskChunk]?
 
     struct MotionTaskStatus: Codable, Sendable {
         let name: String
         let isDefaultStatus: Bool
     }
 
+    struct MotionTaskChunk: Codable, Sendable {
+        let id: String
+        let duration: Int?
+        let scheduledStart: String?
+        let scheduledEnd: String?
+        let completedTime: String?
+        let isFixed: Bool?
+    }
+
     enum CodingKeys: String, CodingKey {
-        case id, name, duration, scheduledStart, scheduledEnd, completed, status
+        case id, name, duration, scheduledStart, scheduledEnd, completed, status, chunks
     }
 
     init(from decoder: Decoder) throws {
@@ -31,6 +42,7 @@ struct MotionTask: Decodable, Sendable, Identifiable {
         scheduledEnd = try c.decodeIfPresent(String.self, forKey: .scheduledEnd)
         completed = (try? c.decodeIfPresent(Bool.self, forKey: .completed)) ?? false
         status = try? c.decodeIfPresent(MotionTaskStatus.self, forKey: .status)
+        chunks = try? c.decodeIfPresent([MotionTaskChunk].self, forKey: .chunks)
         // duration can be an Int (minutes), "NONE", "REMINDER", or absent — treat non-Int as nil
         duration = try? c.decode(Int.self, forKey: .duration)
     }
@@ -131,13 +143,51 @@ actor MotionAPIService {
 
     private func findActiveTask(in tasks: [MotionTask], at date: Date) -> MotionTask? {
         tasks.first { task in
-            guard !task.completed,
-                  let startStr = task.scheduledStart,
-                  let endStr = task.scheduledEnd,
-                  let start = isoFormatter.date(from: startStr),
-                  let end = isoFormatter.date(from: endStr) else { return false }
-            return start <= date && date <= end
+            guard !task.completed else { return false }
+
+            // Check top-level scheduledStart/End first
+            if let startStr = task.scheduledStart,
+               let endStr = task.scheduledEnd,
+               let start = isoFormatter.date(from: startStr),
+               let end = isoFormatter.date(from: endStr),
+               start <= date && date <= end {
+                return true
+            }
+
+            // Check chunks (Motion puts actual calendar blocks here)
+            if let chunks = task.chunks {
+                for chunk in chunks {
+                    guard chunk.completedTime == nil,
+                          let startStr = chunk.scheduledStart,
+                          let endStr = chunk.scheduledEnd,
+                          let start = isoFormatter.date(from: startStr),
+                          let end = isoFormatter.date(from: endStr) else { continue }
+                    if start <= date && date <= end {
+                        return true
+                    }
+                }
+            }
+
+            return false
         }
+    }
+
+    /// Get the active chunk's duration for a task (in minutes), falling back to top-level duration.
+    func activeChunkDuration(for task: MotionTask, at date: Date = Date()) -> Int? {
+        if let chunks = task.chunks {
+            for chunk in chunks {
+                guard chunk.completedTime == nil,
+                      let startStr = chunk.scheduledStart,
+                      let endStr = chunk.scheduledEnd,
+                      let start = isoFormatter.date(from: startStr),
+                      let end = isoFormatter.date(from: endStr),
+                      start <= date && date <= end else { continue }
+                // Use chunk duration if available, otherwise calculate from start/end
+                if let d = chunk.duration { return d }
+                return Int(end.timeIntervalSince(start) / 60)
+            }
+        }
+        return task.duration
     }
 
     private func makeRequest(path: String) throws -> URLRequest {
