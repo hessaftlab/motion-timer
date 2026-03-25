@@ -8,6 +8,13 @@ struct MotionTimerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
 
+    init() {
+        let state = AppState()
+        _appState = StateObject(wrappedValue: state)
+        // Make appState available to AppDelegate for panel launch
+        AppDelegate.sharedAppState = state
+    }
+
     var body: some Scene {
         // Menu bar icon + popover — no Dock icon
         MenuBarExtra("MotionTimer", systemImage: "timer") {
@@ -22,6 +29,8 @@ struct MotionTimerApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Reference to appState, set from the App struct's onAppear
+    static var sharedAppState: AppState?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Accessory policy: no Dock icon, no menu bar app menu
@@ -30,6 +39,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Request notification permission on first launch (non-blocking)
         Task {
             await NotificationService.requestPermission()
+        }
+
+        // Show floating panel after a short delay to let SwiftUI finish setup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Self.sharedAppState?.showPanelOnLaunch()
         }
     }
 

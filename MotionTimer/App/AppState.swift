@@ -22,8 +22,10 @@ final class AppState: ObservableObject {
         ])
 
         motionPoller.startPolling()
+    }
 
-        // Auto-show the floating timer panel on launch
+    /// Call once the app has finished launching to show the floating panel.
+    func showPanelOnLaunch() {
         showTimerWindow = true
         WindowManager.shared.showPanel(appState: self)
     }
