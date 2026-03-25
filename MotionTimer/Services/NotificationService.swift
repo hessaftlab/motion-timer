@@ -50,6 +50,24 @@ enum NotificationService {
         }
     }
 
+    // MARK: - Alert
+
+    /// Show a modal NSAlert announcing timer completion.
+    /// Also plays the Glass sound. Blocks until the user dismisses.
+    @MainActor
+    static func showCompletionAlert(taskName: String) {
+        playCompletionSound()
+
+        let alert = NSAlert()
+        alert.messageText = "Timer Complete"
+        alert.informativeText = taskName.isEmpty
+            ? "Your timer has finished."
+            : "\"\(taskName)\" is done."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
     // MARK: - Private
 
     private static func playCompletionSound() {

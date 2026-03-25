@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 struct MenuBarView: View {
     @ObservedObject var model: TimerModel
+    @State private var customMinutes: Int = 25
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,15 +37,42 @@ struct MenuBarView: View {
 
                 Spacer()
 
-                Button {
-                    model.toggle()
-                } label: {
-                    Image(systemName: model.isRunning ? "pause.fill" : "play.fill")
-                        .imageScale(.large)
-                        .frame(width: 40, height: 40)
-                        .background(Circle().fill(.ultraThinMaterial))
+                HStack(spacing: 8) {
+                    // Mode toggle
+                    Button {
+                        model.mode = model.mode == .countdown ? .countup : .countdown
+                    } label: {
+                        Image(systemName: model.mode.iconName)
+                            .imageScale(.medium)
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(.ultraThinMaterial))
+                    }
+                    .buttonStyle(.plain)
+                    .help(model.mode == .countdown ? "Switch to Count Up" : "Switch to Countdown")
+
+                    // Reset
+                    Button {
+                        model.reset()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .imageScale(.medium)
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(.ultraThinMaterial))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reset")
+
+                    // Play / Pause
+                    Button {
+                        model.toggle()
+                    } label: {
+                        Image(systemName: model.isRunning ? "pause.fill" : "play.fill")
+                            .imageScale(.large)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(.ultraThinMaterial))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
@@ -66,6 +94,10 @@ struct MenuBarView: View {
             ForEach(TimerPreset.all) { preset in
                 presetRow(preset)
             }
+
+            if model.currentPreset.isCustom {
+                customDurationRow
+            }
         }
         .padding(.bottom, 8)
     }
@@ -75,7 +107,9 @@ struct MenuBarView: View {
         let isActive = model.currentPreset == preset
         Button {
             model.apply(preset: preset)
-            model.start()
+            if !preset.isCustom {
+                model.start()
+            }
         } label: {
             HStack {
                 Text(preset.name)
@@ -95,6 +129,33 @@ struct MenuBarView: View {
         .background(isActive ? Color.accentColor.opacity(0.12) : Color.clear)
     }
 
+    // MARK: - Custom duration
+
+    private var customDurationRow: some View {
+        HStack {
+            Text("Minutes:")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Stepper(
+                "\(customMinutes) min",
+                value: $customMinutes,
+                in: 1...240,
+                step: 1
+            )
+            .labelsHidden()
+            .onChange(of: customMinutes) { _, newValue in
+                model.setDuration(newValue * 60)
+            }
+            Text("\(customMinutes) min")
+                .font(.callout)
+                .monospacedDigit()
+                .frame(width: 50, alignment: .trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+    }
+
     // MARK: - Quit
 
     private var quitRow: some View {
@@ -111,4 +172,3 @@ struct MenuBarView: View {
         .foregroundStyle(.secondary)
     }
 }
-

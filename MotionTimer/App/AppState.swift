@@ -9,7 +9,11 @@ final class AppState: ObservableObject {
 
     let timerModel = TimerModel()
 
-    init() {}
+    init() {
+        UserDefaults.standard.register(defaults: [
+            "motionAPIKey": "zN942dZXP+YMQc9s4KurWyYXXhiVAXYfHYWTDBoz2uU="
+        ])
+    }
 
     /// Toggle the floating timer panel. Delegates to WindowManager.
     func toggleTimerWindow() {

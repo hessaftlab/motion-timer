@@ -205,6 +205,8 @@ final class TimerModel: ObservableObject {
             name: AppConstants.Timer.completionNotification,
             object: self
         )
+        NotificationService.sendTimerComplete(taskName: currentPreset.name)
+        NotificationService.showCompletionAlert(taskName: currentPreset.name)
     }
 
     /// The seconds value shown to the user.

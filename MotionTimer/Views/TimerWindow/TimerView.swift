@@ -1,29 +1,35 @@
 import SwiftUI
 
-/// Main floating timer window: task label · progress ring · time digits · controls.
-///
-/// Designed as a compact, chrome-free panel (~280×320 pt) with frosted-glass material.
+/// Floating timer window: task label · progress ring · time digits only.
+/// Controls live in the menu bar popover. Window is resizable by dragging edges.
 @MainActor
 struct TimerView: View {
     @ObservedObject var model: TimerModel
+    @EnvironmentObject var appState: AppState
+    @State private var isHovering = false
 
     /// Phase 2: replaced by the active Motion task name.
     private let taskName = "Focus Time"
 
     var body: some View {
-        VStack(spacing: 0) {
-            taskLabel
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                taskLabel
 
-            ringWithDigits
-                .padding(.vertical, 24)
+                ringWithDigits
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, 16)
+            }
 
-            TimerControlsView(model: model)
-                .padding(.bottom, 20)
+            if isHovering {
+                closeButton
+            }
         }
-        .frame(width: 280, height: 320)
+        .frame(minWidth: 160, minHeight: 180)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: 8)
+        .onHover { isHovering = $0 }
     }
 
     // MARK: - Task label
@@ -58,5 +64,19 @@ struct TimerView: View {
             }
         }
     }
-}
 
+    // MARK: - Close button
+
+    private var closeButton: some View {
+        Button {
+            appState.toggleTimerWindow()
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .imageScale(.medium)
+                .foregroundStyle(.secondary)
+                .symbolRenderingMode(.hierarchical)
+        }
+        .buttonStyle(.plain)
+        .padding(10)
+    }
+}

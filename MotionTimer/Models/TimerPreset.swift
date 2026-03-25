@@ -18,12 +18,13 @@ struct TimerPreset: Identifiable, Hashable, Sendable, Codable {
 
     // MARK: - Built-in presets
 
-    static let focus      = TimerPreset(name: "Focus 15m",     duration: 15 * 60)
+    static let focus      = TimerPreset(name: "Focus 15m",      duration: 15 * 60)
+    static let focus25    = TimerPreset(name: "Focus 25m",      duration: 25 * 60)
     static let deepWork   = TimerPreset(name: "Deep Work 115m", duration: 115 * 60)
-    static let shortBreak = TimerPreset(name: "Break 5m",      duration:  5 * 60)
-    static let custom     = TimerPreset(name: "Custom",        duration: 0)
+    static let shortBreak = TimerPreset(name: "Break 5m",       duration:  5 * 60)
+    static let custom     = TimerPreset(name: "Custom",         duration: 0)
 
-    static let defaults: [TimerPreset] = [.focus, .deepWork, .shortBreak, .custom]
+    static let defaults: [TimerPreset] = [.focus, .focus25, .deepWork, .shortBreak, .custom]
     /// Alias for `defaults` — used by views expecting `TimerPreset.all`.
     static var all: [TimerPreset] { defaults }
 }
