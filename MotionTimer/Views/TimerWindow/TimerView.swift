@@ -8,8 +8,10 @@ struct TimerView: View {
     @EnvironmentObject var appState: AppState
     @State private var isHovering = false
 
-    /// Phase 2: replaced by the active Motion task name.
-    private let taskName = "Focus Time"
+    /// Shows the active Motion task name, falling back to the current preset name.
+    private var displayTaskName: String {
+        appState.motionPoller.currentTask?.name ?? model.currentPreset.name
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -35,10 +37,13 @@ struct TimerView: View {
     // MARK: - Task label
 
     private var taskLabel: some View {
-        Text(taskName)
+        Text(displayTaskName)
             .font(.subheadline.weight(.medium))
             .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
             .padding(.top, 20)
+            .padding(.horizontal, 16)
     }
 
     // MARK: - Ring + digits

@@ -2,91 +2,143 @@ import Foundation
 
 // MARK: - MotionTask
 
-/// A task from the Motion.ai scheduling API.
-/// TODO: Phase 2 — extend with project, priority, and status fields per Motion API spec.
-struct MotionTask: Sendable, Codable, Identifiable {
+struct MotionTask: Decodable, Sendable, Identifiable {
     let id: String
     let name: String
-    /// Scheduled start time (nil if the task has no explicit start).
-    let scheduledStart: Date?
-    /// Scheduled end time (nil if the task has no explicit end).
-    let scheduledEnd: Date?
-    /// Planned duration in seconds.
-    let duration: TimeInterval
+    /// Duration in minutes. Nil when the API returns "NONE", "REMINDER", or the field is absent.
+    let duration: Int?
+    /// ISO 8601 datetime string, e.g. "2026-03-25T08:15:00.000Z"
+    let scheduledStart: String?
+    /// ISO 8601 datetime string, e.g. "2026-03-25T09:10:00.000Z"
+    let scheduledEnd: String?
+    let completed: Bool
+    let status: MotionTaskStatus?
+
+    struct MotionTaskStatus: Codable, Sendable {
+        let name: String
+        let isDefaultStatus: Bool
+    }
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case scheduledStart
-        case scheduledEnd
-        case duration
+        case id, name, duration, scheduledStart, scheduledEnd, completed, status
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        scheduledStart = try c.decodeIfPresent(String.self, forKey: .scheduledStart)
+        scheduledEnd = try c.decodeIfPresent(String.self, forKey: .scheduledEnd)
+        completed = (try? c.decodeIfPresent(Bool.self, forKey: .completed)) ?? false
+        status = try? c.decodeIfPresent(MotionTaskStatus.self, forKey: .status)
+        // duration can be an Int (minutes), "NONE", "REMINDER", or absent — treat non-Int as nil
+        duration = try? c.decode(Int.self, forKey: .duration)
     }
 }
 
 // MARK: - MotionAPIService
 
-/// Phase 2 placeholder: async REST client for the Motion.ai API.
-///
-/// Usage:
-/// ```swift
-/// await MotionAPIService.shared.apiKey = "your-key"
-/// let task = try await MotionAPIService.shared.fetchCurrentTask()
-/// ```
-///
-/// TODO: Phase 2 — remove this placeholder and implement full endpoints.
-/// TODO: Phase 2 — migrate API key storage from UserDefaults to macOS Keychain.
-/// TODO: Phase 2 — wire into MotionTaskPoller for automatic task polling.
 actor MotionAPIService {
     static let shared = MotionAPIService()
 
-    private let session: URLSession
+    private let session = URLSession.shared
     private let baseURL = "https://api.usemotion.com/v1"
-    private let decoder: JSONDecoder
+    private let decoder = JSONDecoder()
+    private let apiKeyDefaultsKey = "motionAPIKey"
 
-    // TODO: Phase 2 — replace UserDefaults with Keychain (SecItemAdd / SecItemCopyMatching).
-    private let apiKeyDefaultsKey = "MotionTimer.motionAPIKey"
+    // Rate limiting
+    private var lastFetchTime: Date?
+    private var cachedTasks: [MotionTask]?
+    private let cooldown: TimeInterval = 30
 
-    private init() {
-        session = URLSession.shared
-        decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        decoder.dateDecodingStrategy = .iso8601
-    }
+    private let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private init() {}
 
     // MARK: - API Key
 
-    /// The Motion API key.
-    /// TODO: Phase 2 — store in the macOS Keychain instead of UserDefaults.
     var apiKey: String? {
         get { UserDefaults.standard.string(forKey: apiKeyDefaultsKey) }
         set { UserDefaults.standard.set(newValue, forKey: apiKeyDefaultsKey) }
     }
 
-    // MARK: - Endpoints
+    // MARK: - Public Endpoints
 
-    /// Fetch the currently active or next scheduled Motion task.
-    ///
-    /// TODO: Phase 2 — implement using `GET /tasks?status=active`.
+    /// Fetch the first page of tasks from GET /v1/tasks.
+    func fetchTasks() async throws -> [MotionTask] {
+        let (tasks, _) = try await fetchPage(cursor: nil)
+        return tasks
+    }
+
+    /// Find the currently active task (scheduledStart ≤ now ≤ scheduledEnd).
+    /// Paginates up to 3 pages. Returns a cached result if called within the 30-second cooldown.
     func fetchCurrentTask() async throws -> MotionTask? {
-        // TODO: Phase 2 — replace with real implementation.
-        // let request = try makeRequest(path: "/tasks?status=active&limit=1")
-        // let response: TaskListResponse = try await perform(request)
-        // return response.tasks.first
-        throw MotionAPIError.notImplemented
+        let now = Date()
+
+        // Serve from cache if within cooldown window
+        if let last = lastFetchTime,
+           now.timeIntervalSince(last) < cooldown,
+           let cached = cachedTasks {
+            return findActiveTask(in: cached, at: now)
+        }
+
+        var cursor: String? = nil
+        var allTasks: [MotionTask] = []
+
+        for _ in 0..<3 {
+            let (tasks, nextCursor) = try await fetchPage(cursor: cursor)
+            allTasks.append(contentsOf: tasks)
+
+            if let active = findActiveTask(in: tasks, at: now) {
+                lastFetchTime = now
+                cachedTasks = allTasks
+                return active
+            }
+
+            guard let next = nextCursor else { break }
+            cursor = next
+        }
+
+        lastFetchTime = now
+        cachedTasks = allTasks
+        return nil
     }
 
-    /// Fetch upcoming scheduled tasks.
-    ///
-    /// TODO: Phase 2 — implement using `GET /tasks?status=upcoming`.
-    func fetchUpcomingTasks() async throws -> [MotionTask] {
-        // TODO: Phase 2 — replace with real implementation.
-        // let request = try makeRequest(path: "/tasks?status=upcoming")
-        // let response: TaskListResponse = try await perform(request)
-        // return response.tasks
-        throw MotionAPIError.notImplemented
+    // MARK: - Private Helpers
+
+    private struct TaskListResponse: Decodable {
+        struct Meta: Decodable {
+            let pageSize: Int
+            let nextCursor: String?
+        }
+        let meta: Meta
+        let tasks: [MotionTask]
     }
 
-    // MARK: - Private helpers
+    private func fetchPage(cursor: String?) async throws -> ([MotionTask], String?) {
+        var path = "/tasks"
+        if let cursor {
+            path += "?cursor=\(cursor)"
+        }
+        let request = try makeRequest(path: path)
+        let response: TaskListResponse = try await perform(request)
+        return (response.tasks, response.meta.nextCursor)
+    }
+
+    private func findActiveTask(in tasks: [MotionTask], at date: Date) -> MotionTask? {
+        tasks.first { task in
+            guard !task.completed,
+                  let startStr = task.scheduledStart,
+                  let endStr = task.scheduledEnd,
+                  let start = isoFormatter.date(from: startStr),
+                  let end = isoFormatter.date(from: endStr) else { return false }
+            return start <= date && date <= end
+        }
+    }
 
     private func makeRequest(path: String) throws -> URLRequest {
         guard let key = apiKey, !key.isEmpty else {
@@ -103,11 +155,11 @@ actor MotionAPIService {
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
+        guard let http = response as? HTTPURLResponse else {
             throw MotionAPIError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
-            throw MotionAPIError.httpError(statusCode: httpResponse.statusCode)
+        guard (200..<300).contains(http.statusCode) else {
+            throw MotionAPIError.httpError(statusCode: http.statusCode)
         }
         return try decoder.decode(T.self, from: data)
     }
@@ -116,7 +168,6 @@ actor MotionAPIService {
 // MARK: - MotionAPIError
 
 enum MotionAPIError: LocalizedError, Sendable {
-    case notImplemented
     case missingAPIKey
     case invalidURL
     case invalidResponse
@@ -124,8 +175,6 @@ enum MotionAPIError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .notImplemented:
-            return "This feature is not yet implemented (Phase 2)."
         case .missingAPIKey:
             return "Motion API key is not configured."
         case .invalidURL:

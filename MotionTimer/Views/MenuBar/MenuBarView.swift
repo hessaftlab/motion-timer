@@ -4,11 +4,15 @@ import SwiftUI
 @MainActor
 struct MenuBarView: View {
     @ObservedObject var model: TimerModel
+    @EnvironmentObject var appState: AppState
     @State private var customMinutes: Int = 25
+    @AppStorage("motionSyncEnabled") private var motionSyncEnabled: Bool = true
 
     var body: some View {
         VStack(spacing: 0) {
             statusSection
+            Divider()
+            motionSection
             Divider()
             presetsSection
             Divider()
@@ -77,6 +81,83 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    // MARK: - Motion sync section
+
+    private var motionSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Motion Sync")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+
+                Spacer()
+
+                Toggle("", isOn: $motionSyncEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .onChange(of: motionSyncEnabled) { _, enabled in
+                        if enabled {
+                            appState.motionPoller.startPolling()
+                        } else {
+                            appState.motionPoller.stopPolling()
+                        }
+                    }
+            }
+
+            motionStatusRow
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private var motionStatusRow: some View {
+        let poller = appState.motionPoller
+
+        if !motionSyncEnabled {
+            Label("Sync disabled", systemImage: "moon.zzz")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        } else if let task = poller.currentTask {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .imageScale(.small)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(task.name)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text(model.timeString + " remaining")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } else if let error = poller.lastError {
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .imageScale(.small)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        } else if poller.isPolling {
+            Label("Polling…", systemImage: "arrow.clockwise")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            Label("No active task", systemImage: "clock")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
     }
 
     // MARK: - Preset quick-launch buttons
