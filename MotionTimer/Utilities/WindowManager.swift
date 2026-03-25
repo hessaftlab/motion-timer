@@ -73,7 +73,7 @@ final class TimerPanel: NSPanel {
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 320),
-            styleMask: [.borderless, .nonactivatingPanel, .resizable],
+            styleMask: [.titled, .resizable, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -86,6 +86,14 @@ final class TimerPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         isMovableByWindowBackground = true
+        titlebarAppearsTransparent = true
+        titleVisibility = .hidden
+        // Hide window buttons (close/minimize/zoom)
+        standardWindowButton(.closeButton)?.isHidden = true
+        standardWindowButton(.miniaturizeButton)?.isHidden = true
+        standardWindowButton(.zoomButton)?.isHidden = true
+        minSize = NSSize(width: 180, height: 200)
+        maxSize = NSSize(width: 600, height: 700)
         // Show on all Spaces and above fullscreen apps
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         animationBehavior = .utilityWindow
@@ -125,9 +133,26 @@ final class TimerPanel: NSPanel {
     /// Do not become main window — keeps focus with the user's active app.
     override var canBecomeMain: Bool { false }
 
-    /// Forward mouseDown to window drag so the panel is movable even when
-    /// NSHostingView intercepts the event before isMovableByWindowBackground fires.
+    /// Edge resize zone width in points.
+    private let resizeEdge: CGFloat = 8
+
     override func mouseDown(with event: NSEvent) {
-        performDrag(with: event)
+        let loc = event.locationInWindow
+        // Bottom-right corner: resize
+        if loc.x >= frame.width - resizeEdge && loc.y <= resizeEdge {
+            // Handled by system if styleMask includes .resizable
+            super.mouseDown(with: event)
+        } else {
+            performDrag(with: event)
+        }
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        let loc = event.locationInWindow
+        if loc.x >= frame.width - resizeEdge && loc.y <= resizeEdge {
+            NSCursor.arrow.set()
+        } else {
+            super.cursorUpdate(with: event)
+        }
     }
 }

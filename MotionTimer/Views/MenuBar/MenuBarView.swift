@@ -18,7 +18,7 @@ struct MenuBarView: View {
             Divider()
             bottomRow
         }
-        .frame(width: 240)
+        .frame(width: 280)
         .background(.ultraThinMaterial)
     }
 
@@ -28,11 +28,11 @@ struct MenuBarView: View {
         VStack(spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(model.timeString)
-                        .font(.system(size: 32, weight: .light, design: .monospaced))
+                    Text(model.formattedTime)
+                        .font(.system(size: 28, weight: .light, design: .monospaced))
                         .monospacedDigit()
-                        .contentTransition(.numericText())
-                        .animation(.spring(duration: 0.3), value: model.timeString)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
 
                     Label(model.statusLabel, systemImage: model.mode.iconName)
                         .font(.caption)

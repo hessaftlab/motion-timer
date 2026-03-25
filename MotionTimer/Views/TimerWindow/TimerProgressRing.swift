@@ -10,8 +10,8 @@ struct TimerProgressRing: View {
     let progress: Double
     var arcOpacity: Double = 1.0
 
-    private let strokeWidth: CGFloat   = 8
-    private let trackOpacity: Double   = 0.15
+    private let strokeWidth: CGFloat   = 12
+    private let trackOpacity: Double   = 0.25
     private let ringGradient = AngularGradient(
         gradient: Gradient(colors: [
             Color(red: 0.40, green: 0.60, blue: 1.00),  // soft blue
