@@ -16,7 +16,7 @@ struct MenuBarView: View {
             Divider()
             presetsSection
             Divider()
-            quitRow
+            bottomRow
         }
         .frame(width: 240)
         .background(.ultraThinMaterial)
@@ -237,19 +237,37 @@ struct MenuBarView: View {
         .padding(.vertical, 6)
     }
 
-    // MARK: - Quit
+    // MARK: - Show/Hide Timer + Quit
 
-    private var quitRow: some View {
-        Button(role: .destructive) {
-            NSApplication.shared.terminate(nil)
-        } label: {
-            Label("Quit MotionTimer", systemImage: "power")
+    private var bottomRow: some View {
+        VStack(spacing: 0) {
+            Button {
+                appState.toggleTimerWindow()
+            } label: {
+                Label(
+                    appState.showTimerWindow ? "Hide Timer" : "Show Timer",
+                    systemImage: appState.showTimerWindow ? "eye.slash" : "eye"
+                )
                 .font(.callout)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            Button(role: .destructive) {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Label("Quit MotionTimer", systemImage: "power")
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
     }
 }
