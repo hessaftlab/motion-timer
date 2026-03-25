@@ -8,6 +8,7 @@ import SwiftUI
 @MainActor
 struct TimerProgressRing: View {
     let progress: Double
+    var arcOpacity: Double = 1.0
 
     private let strokeWidth: CGFloat   = 8
     private let trackOpacity: Double   = 0.15
@@ -36,6 +37,7 @@ struct TimerProgressRing: View {
                     lineCap:  .round
                 ))
                 .rotationEffect(.degrees(-90))  // start from 12 o'clock
+                .opacity(arcOpacity)
                 .animation(.linear(duration: 1), value: progress)
         }
     }

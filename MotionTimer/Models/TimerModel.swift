@@ -39,9 +39,10 @@ final class TimerModel: ObservableObject {
 
     // MARK: - Computed properties
 
-    /// Fraction of total time elapsed, in [0, 1]. Always 0 for countup mode.
+    /// Fraction of total time elapsed, in [0, 1]. Returns 1.0 when idle/countup so the ring is always visible.
     var progress: Double {
-        guard mode == .countdown, totalTime > 0 else { return 0 }
+        guard mode == .countdown, totalTime > 0 else { return 1.0 }
+        if timerState == .idle { return 1.0 }
         return Double(totalTime - timeRemaining) / Double(totalTime)
     }
 

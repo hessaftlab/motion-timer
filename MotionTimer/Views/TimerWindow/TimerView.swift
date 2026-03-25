@@ -28,7 +28,6 @@ struct TimerView: View {
             }
         }
         .frame(minWidth: 160, minHeight: 180)
-        .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: 8)
         .onHover { isHovering = $0 }
@@ -50,8 +49,11 @@ struct TimerView: View {
 
     private var ringWithDigits: some View {
         ZStack {
-            TimerProgressRing(progress: model.progress)
-                .frame(width: 180, height: 180)
+            TimerProgressRing(
+                progress: model.progress,
+                arcOpacity: model.timerState == .idle ? 0.3 : 1.0
+            )
+            .frame(width: 180, height: 180)
 
             VStack(spacing: 2) {
                 Text(model.timeString)

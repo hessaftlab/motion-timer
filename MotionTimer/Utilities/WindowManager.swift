@@ -124,4 +124,10 @@ final class TimerPanel: NSPanel {
 
     /// Do not become main window — keeps focus with the user's active app.
     override var canBecomeMain: Bool { false }
+
+    /// Forward mouseDown to window drag so the panel is movable even when
+    /// NSHostingView intercepts the event before isMovableByWindowBackground fires.
+    override func mouseDown(with event: NSEvent) {
+        performDrag(with: event)
+    }
 }
