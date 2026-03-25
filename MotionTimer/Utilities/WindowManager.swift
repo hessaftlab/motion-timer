@@ -48,9 +48,8 @@ final class WindowManager {
         effectView.layer?.masksToBounds = true
 
         let hostingView = NSHostingView(
-            rootView: TimerView()
+            rootView: TimerView(model: appState.timerModel)
                 .environmentObject(appState)
-                .environmentObject(appState.timerModel)
         )
         hostingView.translatesAutoresizingMaskIntoConstraints = false
         effectView.addSubview(hostingView)

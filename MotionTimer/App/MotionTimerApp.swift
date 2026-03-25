@@ -11,7 +11,7 @@ struct MotionTimerApp: App {
     var body: some Scene {
         // Menu bar icon + popover — no Dock icon
         MenuBarExtra("MotionTimer", systemImage: "timer") {
-            MenuBarView()
+            MenuBarView(model: appState.timerModel)
                 .environmentObject(appState)
         }
         .menuBarExtraStyle(.window)
