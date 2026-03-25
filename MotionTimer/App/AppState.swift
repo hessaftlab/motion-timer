@@ -22,6 +22,10 @@ final class AppState: ObservableObject {
         ])
 
         motionPoller.startPolling()
+
+        // Auto-show the floating timer panel on launch
+        showTimerWindow = true
+        WindowManager.shared.showPanel(appState: self)
     }
 
     /// Toggle the floating timer panel. Delegates to WindowManager.

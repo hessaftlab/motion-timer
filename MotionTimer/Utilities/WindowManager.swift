@@ -72,7 +72,7 @@ final class TimerPanel: NSPanel {
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 240, height: 260),
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 320),
             styleMask: [.borderless, .nonactivatingPanel, .resizable],
             backing: .buffered,
             defer: false
