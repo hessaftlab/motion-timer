@@ -41,13 +41,3 @@ struct TimerProgressRing: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview {
-    ZStack {
-        Color.black
-        TimerProgressRing(progress: 0.65)
-            .frame(width: 200, height: 200)
-    }
-    .frame(width: 280, height: 280)
-}

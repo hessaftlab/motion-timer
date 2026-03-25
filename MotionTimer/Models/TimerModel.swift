@@ -50,6 +50,19 @@ final class TimerModel: ObservableObject {
         TimeFormatter.format(displaySeconds)
     }
 
+    /// Alias for `formattedTime` — used by views expecting `timeString`.
+    var timeString: String { formattedTime }
+
+    /// Human-readable status label matching the current `timerState`.
+    var statusLabel: String {
+        switch timerState {
+        case .idle:      return "Idle"
+        case .running:   return "Running"
+        case .paused:    return "Paused"
+        case .completed: return "Completed"
+        }
+    }
+
     /// `true` when less than `warningThreshold` of total time remains.
     var isInWarningZone: Bool {
         guard mode == .countdown, totalTime > 0 else { return false }
@@ -57,6 +70,9 @@ final class TimerModel: ObservableObject {
     }
 
     // MARK: - Public API
+
+    /// Alias for `load(preset:)` — used by views expecting `apply(preset:)`.
+    func apply(preset: TimerPreset) { load(preset: preset) }
 
     /// Load a preset and reset the timer to idle.
     func load(preset: TimerPreset) {

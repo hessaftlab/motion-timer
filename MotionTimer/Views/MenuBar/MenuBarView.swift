@@ -64,33 +64,35 @@ struct MenuBarView: View {
                 .padding(.top, 10)
 
             ForEach(TimerPreset.all) { preset in
-                Button {
-                    model.apply(preset: preset)
-                    model.start()
-                } label: {
-                    HStack {
-                        Text(preset.name)
-                            .font(.callout)
-                        Spacer()
-                        if model.currentPreset == preset {
-                            Image(systemName: "checkmark")
-                                .imageScale(.small)
-                                .foregroundStyle(.accent)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 7)
-                }
-                .buttonStyle(.plain)
-                .background(
-                    model.currentPreset == preset
-                        ? Color.accentColor.opacity(0.12)
-                        : Color.clear
-                )
+                presetRow(preset)
             }
         }
         .padding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private func presetRow(_ preset: TimerPreset) -> some View {
+        let isActive = model.currentPreset == preset
+        Button {
+            model.apply(preset: preset)
+            model.start()
+        } label: {
+            HStack {
+                Text(preset.name)
+                    .font(.callout)
+                Spacer()
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .imageScale(.small)
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 16)
+            .padding(.vertical, 7)
+        }
+        .buttonStyle(.plain)
+        .background(isActive ? Color.accentColor.opacity(0.12) : Color.clear)
     }
 
     // MARK: - Quit
@@ -110,9 +112,3 @@ struct MenuBarView: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview {
-    MenuBarView(model: TimerModel())
-        .preferredColorScheme(.dark)
-}

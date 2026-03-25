@@ -60,12 +60,3 @@ struct TimerView: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview {
-    ZStack {
-        Color(white: 0.08).ignoresSafeArea()
-        TimerView(model: TimerModel())
-    }
-    .preferredColorScheme(.dark)
-}

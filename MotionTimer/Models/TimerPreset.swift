@@ -24,4 +24,6 @@ struct TimerPreset: Identifiable, Hashable, Sendable, Codable {
     static let custom    = TimerPreset(name: "Custom",      duration: 0)
 
     static let defaults: [TimerPreset] = [.focus, .deepWork, .shortBreak, .custom]
+    /// Alias for `defaults` — used by views expecting `TimerPreset.all`.
+    static var all: [TimerPreset] { defaults }
 }

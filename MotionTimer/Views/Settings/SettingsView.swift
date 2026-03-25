@@ -57,9 +57,3 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview {
-    SettingsView()
-        .preferredColorScheme(.dark)
-}

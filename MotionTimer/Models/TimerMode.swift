@@ -2,4 +2,12 @@
 enum TimerMode: String, CaseIterable, Sendable, Codable {
     case countdown
     case countup
+
+    /// SF Symbol name representing this mode.
+    var iconName: String {
+        switch self {
+        case .countdown: return "timer"
+        case .countup:   return "stopwatch"
+        }
+    }
 }

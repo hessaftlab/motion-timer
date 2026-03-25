@@ -31,7 +31,7 @@ struct TimerControlsView: View {
             }
         } label: {
             Label(
-                model.currentPreset?.name ?? "Preset",
+                model.currentPreset.name,
                 systemImage: "clock"
             )
             .font(.caption)
@@ -91,12 +91,3 @@ struct TimerControlsView: View {
     }
 }
 
-// MARK: - Preview
-
-#Preview {
-    ZStack {
-        Color.black.ignoresSafeArea()
-        TimerControlsView(model: TimerModel())
-            .frame(width: 280)
-    }
-}
